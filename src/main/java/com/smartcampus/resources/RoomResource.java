@@ -27,13 +27,19 @@ public class RoomResource {
     @GET
     @Produces(MediaType.APPLICATION_JSON)
     public Response getAllRooms() {
+        /** --- TEMPORARY SABOTAGE FOR TASK 5.4 DEMO ---
+        *if (true) {
+            throw new RuntimeException("Simulated catastrophic failure for testing!");
+        }
+         --------------------------------------------*/
+        
         Collection<Room> rooms = roomDatabase.values();
         return Response.ok(rooms).build();
     }
 
     /**
      * Creates a new room entry in the in-memory database.
-     * @param newRoom The Room object automatically deserialized from the JSON request payload.
+     * @param newRoom The Room object automatically deserialised from the JSON request payload.
      * @return 201 Created response if successful, or 400 Bad Request if validation fails.
      */
     @POST
