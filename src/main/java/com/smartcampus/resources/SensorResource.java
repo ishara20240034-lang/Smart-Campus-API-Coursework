@@ -61,9 +61,8 @@ public class SensorResource {
         Room parentRoom = rooms.get(newSensor.getRoomId());
         
         if (parentRoom == null) {
-            return Response.status(Response.Status.BAD_REQUEST)
-                           .entity("Cannot register sensor: Specified room does not exist.")
-                           .build();
+            // Part 5.2: Throw custom exception for invalid foreign keys
+            throw new com.smartcampus.exceptions.LinkedResourceNotFoundException("Cannot register sensor: Specified room ID '" + newSensor.getRoomId() + "' does not exist.");
         }
 
         sensorDatabase.put(newSensor.getId(), newSensor);
