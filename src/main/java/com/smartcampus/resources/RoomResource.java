@@ -15,9 +15,14 @@ public class RoomResource {
     // Note: Using ConcurrentHashMap for thread safety as JAX-RS resource instances are request-scoped.
     private static Map<String, Room> roomDatabase = new ConcurrentHashMap<>();
 
+    // Getter so SensorResource can check if a room exists before linking (Part 3.1 Requirement)
+    public static Map<String, Room> getRoomDatabase() {
+        return roomDatabase;
+    }
+
     /**
      * Retrieves all rooms currently registered in the system.
-     * * @return A Response containing a JSON array of all Room objects.
+     * @return A Response containing a JSON array of all Room objects.
      */
     @GET
     @Produces(MediaType.APPLICATION_JSON)
@@ -28,7 +33,7 @@ public class RoomResource {
 
     /**
      * Creates a new room entry in the in-memory database.
-     * * @param newRoom The Room object automatically deserialized from the JSON request payload.
+     * @param newRoom The Room object automatically deserialized from the JSON request payload.
      * @return 201 Created response if successful, or 400 Bad Request if validation fails.
      */
     @POST
@@ -49,7 +54,7 @@ public class RoomResource {
 
     /**
      * Retrieves a specific room by its unique identifier.
-     * * @param roomId The ID extracted directly from the URL path.
+     * @param roomId The ID extracted directly from the URL path.
      * @return 200 OK with the requested Room data, or a 404 Not Found status.
      */
     @GET
@@ -66,54 +71,35 @@ public class RoomResource {
                            .build(); 
         }
     }
+
     /**
      * Deletes a specific room from the system.
+     * Enforces Part 2.2 Safety Logic: Cannot delete if sensors are still attached!
      * @param roomId The unique identifier of the room to be removed.
-     * @return 204 No Content upon successful deletion, or 404 Not Found.
+     * @return 204 No Content upon successful deletion, or 409 Conflict / 404 Not Found.
      */
     @DELETE
     @Path("/{roomId}")
     public Response deleteRoom(@PathParam("roomId") String roomId) {
-        // Attempt to remove the room from the map
-        Room removedRoom = roomDatabase.remove(roomId);
+        Room room = roomDatabase.get(roomId);
         
-        if (removedRoom != null) {
-            // 204 No Content is the standard REST response for a successful delete
-            return Response.noContent().build(); 
-        } else {
-            // If the room wasn't in the map, return a 404
+        // 1. If the room doesn't exist, return a 404
+        if (room == null) {
             return Response.status(Response.Status.NOT_FOUND)
                            .entity("Cannot delete: Room not found.")
                            .build(); 
         }
-    }
-    /**
-     * Links a specific sensor to a specific room.
-     * @param roomId The ID of the room.
-     * @param sensorId The ID of the sensor to add.
-     * @return 200 OK with the updated Room data, or 404 if the room isn't found.
-     */
-    @POST
-    @Path("/{roomId}/sensors/{sensorId}")
-    @Produces(MediaType.APPLICATION_JSON)
-    public Response addSensorToRoom(@PathParam("roomId") String roomId, @PathParam("sensorId") String sensorId) {
         
-        // 1. Find the room in our database
-        Room room = roomDatabase.get(roomId);
-        
-        // 2. If the room doesn't exist, return a 404 error
-        if (room == null) {
-            return Response.status(Response.Status.NOT_FOUND)
-                           .entity("Cannot link sensor: Room not found.")
+        // 2. Business Logic Constraint: Prevent Data Orphans
+        if (!room.getSensorIds().isEmpty()) {
+            // Returns a 409 Conflict. In Part 5, we will upgrade this to throw a custom RoomNotEmptyException.
+            return Response.status(Response.Status.CONFLICT)
+                           .entity("Cannot delete: Room currently has active sensors assigned to it.")
                            .build();
         }
         
-        // 3. Add the sensor ID to the room's list (if it isn't already there)
-        if (!room.getSensorIds().contains(sensorId)) {
-            room.getSensorIds().add(sensorId);
-        }
-        
-        // 4. Return the updated room so the user can see the link
-        return Response.ok(room).build();
+        // 3. Attempt to remove the room from the map
+        roomDatabase.remove(roomId);
+        return Response.noContent().build(); 
     }
 }

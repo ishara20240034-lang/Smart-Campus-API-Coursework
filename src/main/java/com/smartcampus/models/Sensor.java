@@ -2,26 +2,27 @@ package com.smartcampus.models;
 
 public class Sensor {
     
-    private String id;        // e.g., "TEMP-001"
-    private String type;      // e.g., "Temperature", "Motion", "Light"
-    private double value;     // e.g., 22.5 (Celsius) or 1.0 (Motion detected)
-    private boolean active;   // true if the sensor is online and working
+    private String id;              // e.g., "TEMP-001"
+    private String type;            // e.g., "Temperature", "Occupancy", "CO2"
+    private String status;          // "ACTIVE", "MAINTENANCE", or "OFFLINE"
+    private double currentValue;    // The most recent measurement
+    private String roomId;          // Foreign key linking to the Room
 
     /**
-     * Default empty constructor.
-     * Strictly required by JAX-RS for automatic JSON deserialisation.
+     * Default empty constructor required by JAX-RS.
      */
     public Sensor() {
     }
 
     /**
-     * Parameterized constructor for easy instantiation in the backend.
+     * Parameterized constructor.
      */
-    public Sensor(String id, String type, double value, boolean active) {
+    public Sensor(String id, String type, String status, double currentValue, String roomId) {
         this.id = id;
         this.type = type;
-        this.value = value;
-        this.active = active;
+        this.status = status;
+        this.currentValue = currentValue;
+        this.roomId = roomId;
     }
 
     // --- GETTERS AND SETTERS ---
@@ -42,19 +43,27 @@ public class Sensor {
         this.type = type; 
     }
 
-    public double getValue() { 
-        return value; 
+    public String getStatus() { 
+        return status; 
     }
     
-    public void setValue(double value) { 
-        this.value = value; 
+    public void setStatus(String status) { 
+        this.status = status; 
     }
 
-    public boolean isActive() { 
-        return active; 
+    public double getCurrentValue() { 
+        return currentValue; 
     }
     
-    public void setActive(boolean active) { 
-        this.active = active; 
+    public void setCurrentValue(double currentValue) { 
+        this.currentValue = currentValue; 
+    }
+
+    public String getRoomId() { 
+        return roomId; 
+    }
+    
+    public void setRoomId(String roomId) { 
+        this.roomId = roomId; 
     }
 }
