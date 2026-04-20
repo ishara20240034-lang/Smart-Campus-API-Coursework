@@ -92,10 +92,8 @@ public class RoomResource {
         
         // 2. Business Logic Constraint: Prevent Data Orphans
         if (!room.getSensorIds().isEmpty()) {
-            // Returns a 409 Conflict. In Part 5, we will upgrade this to throw a custom RoomNotEmptyException.
-            return Response.status(Response.Status.CONFLICT)
-                           .entity("Cannot delete: Room currently has active sensors assigned to it.")
-                           .build();
+            // Part 5.1: Throw custom exception to be caught by the ExceptionMapper
+            throw new com.smartcampus.exceptions.RoomNotEmptyException("Cannot delete: Room currently has active sensors assigned to it.");
         }
         
         // 3. Attempt to remove the room from the map
