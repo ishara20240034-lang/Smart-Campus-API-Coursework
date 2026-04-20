@@ -87,4 +87,33 @@ public class RoomResource {
                            .build(); 
         }
     }
+    /**
+     * Links a specific sensor to a specific room.
+     * @param roomId The ID of the room.
+     * @param sensorId The ID of the sensor to add.
+     * @return 200 OK with the updated Room data, or 404 if the room isn't found.
+     */
+    @POST
+    @Path("/{roomId}/sensors/{sensorId}")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response addSensorToRoom(@PathParam("roomId") String roomId, @PathParam("sensorId") String sensorId) {
+        
+        // 1. Find the room in our database
+        Room room = roomDatabase.get(roomId);
+        
+        // 2. If the room doesn't exist, return a 404 error
+        if (room == null) {
+            return Response.status(Response.Status.NOT_FOUND)
+                           .entity("Cannot link sensor: Room not found.")
+                           .build();
+        }
+        
+        // 3. Add the sensor ID to the room's list (if it isn't already there)
+        if (!room.getSensorIds().contains(sensorId)) {
+            room.getSensorIds().add(sensorId);
+        }
+        
+        // 4. Return the updated room so the user can see the link
+        return Response.ok(room).build();
+    }
 }
