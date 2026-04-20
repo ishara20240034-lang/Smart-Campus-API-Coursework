@@ -64,11 +64,19 @@ public class SensorReadingResource {
                            .build();
         }
 
-        // 2. Add the new reading to the historical database
+        // 2. Part 5.3: State Constraint Check (403 Forbidden)
+        // If the sensor is in MAINTENANCE or OFFLINE, block the reading!
+        if ("MAINTENANCE".equalsIgnoreCase(parentSensor.getStatus()) || "OFFLINE".equalsIgnoreCase(parentSensor.getStatus())) {
+            throw new com.smartcampus.exceptions.SensorUnavailableException(
+                "Sensor '" + sensorId + "' is currently in " + parentSensor.getStatus() + " mode and cannot accept new readings."
+            );
+        }
+
+        // 3. Add the new reading to the historical database
         readingDatabase.putIfAbsent(sensorId, new ArrayList<>());
         readingDatabase.get(sensorId).add(newReading);
 
-        // 3. THE REQUIRED SIDE EFFECT: Update the parent sensor's current value!
+        // 4. THE REQUIRED SIDE EFFECT: Update the parent sensor's current value!
         parentSensor.setCurrentValue(newReading.getValue());
         sensorDb.put(sensorId, parentSensor); // Save the updated sensor state
 
