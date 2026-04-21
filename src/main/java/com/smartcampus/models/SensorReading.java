@@ -2,24 +2,30 @@ package com.smartcampus.models;
 
 import java.util.UUID;
 
+/**
+ * Model for sensor history readings.
+ * Added unique ID and timestamp to track data points over time.
+ */
 public class SensorReading {
     
-    private String id;        // Unique reading event ID
-    private long timestamp;   // Epoch time (ms) when the reading was captured
-    private double value;     // The actual metric value recorded
+    private String id;        
+    private long timestamp;   
+    private double value;     
 
     /**
-     * Default constructor for JAX-RS JSON deserialization.
+     * Default constructor. 
+     * We initialize the ID and timestamp here so every reading is unique by default.
      */
     public SensorReading() {
-        // Automatically generate a unique ID and current timestamp if not provided
         this.id = UUID.randomUUID().toString();
         this.timestamp = System.currentTimeMillis();
     }
 
-    public SensorReading(String id, long timestamp, double value) {
-        this.id = id;
-        this.timestamp = timestamp;
+    /**
+     * Overloaded constructor for manual creation in our logic.
+     */
+    public SensorReading(double value) {
+        this(); // This calls the default constructor above to set ID and timestamp!
         this.value = value;
     }
 
