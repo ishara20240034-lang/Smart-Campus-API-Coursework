@@ -110,3 +110,5 @@ public class RoomResource {
         return Response.noContent().build(); 
     }
 }
+
+//fixed RoomResource.java
