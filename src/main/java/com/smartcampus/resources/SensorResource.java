@@ -3,8 +3,11 @@ package com.smartcampus.resources;
 import com.smartcampus.models.Sensor;
 import com.smartcampus.models.Room;
 import jakarta.ws.rs.*;
+import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import jakarta.ws.rs.core.UriInfo;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -14,22 +17,24 @@ import java.util.concurrent.ConcurrentHashMap;
 @Path("/sensors")
 public class SensorResource {
 
+    // Our in-memory sensor storage
     private static Map<String, Sensor> sensorDatabase = new ConcurrentHashMap<>();
 
-    // Allow the sub-resource (SensorReadingResource) to access the sensor database
+    // Getter for the sub-resource to use later
     public static Map<String, Sensor> getSensorDatabase() {
         return sensorDatabase;
     }
 
     /**
-     * Retrieves all sensors. Includes an optional query parameter for filtering by type.
-     * Example: GET /api/v1/sensors?type=CO2
+     * Gets all sensors. Can filter by type if they use the query param.
+     * Example: GET /api/v1/sensors?type=Temperature
      */
     @GET
     @Produces(MediaType.APPLICATION_JSON)
     public Response getAllSensors(@QueryParam("type") String type) {
         Collection<Sensor> sensors = sensorDatabase.values();
 
+        // if they provided a type, we filter the list manually
         if (type != null && !type.trim().isEmpty()) {
             List<Sensor> filteredSensors = new ArrayList<>();
             for (Sensor s : sensors) {
@@ -44,12 +49,13 @@ public class SensorResource {
     }
 
     /**
-     * Registers a new sensor and automatically links it to its parent room.
+     * Creates a new sensor and links it to a room.
      */
     @POST
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public Response createSensor(Sensor newSensor) {
+    public Response createSensor(Sensor newSensor, @Context UriInfo uriInfo) {
+        // Validation: making sure we have the IDs we need
         if (newSensor.getId() == null || newSensor.getId().trim().isEmpty()) {
             return Response.status(Response.Status.BAD_REQUEST).entity("Sensor ID is required.").build();
         }
@@ -57,25 +63,31 @@ public class SensorResource {
             return Response.status(Response.Status.BAD_REQUEST).entity("Room ID is required to register a sensor.").build();
         }
 
+        // Check if the room actually exists before we try to link to it
         Map<String, Room> rooms = RoomResource.getRoomDatabase();
         Room parentRoom = rooms.get(newSensor.getRoomId());
         
         if (parentRoom == null) {
-            // Part 5.2: Throw custom exception for invalid foreign keys
+            // Throwing our custom 422 error mapper exception
             throw new com.smartcampus.exceptions.LinkedResourceNotFoundException("Cannot register sensor: Specified room ID '" + newSensor.getRoomId() + "' does not exist.");
         }
 
+        // Add to our main sensor map
         sensorDatabase.put(newSensor.getId(), newSensor);
 
+        // Update the Room's list so it knows it has a new sensor (Part 3 requirement)
         if (!parentRoom.getSensorIds().contains(newSensor.getId())) {
             parentRoom.getSensorIds().add(newSensor.getId());
         }
 
-        return Response.status(Response.Status.CREATED).entity(newSensor).build();
+        // Building the Location header for the response
+        URI location = uriInfo.getAbsolutePathBuilder().path(newSensor.getId()).build();
+
+        return Response.created(location).entity(newSensor).build();
     }
 
     /**
-     * Retrieves a specific sensor by its unique identifier.
+     * Grab one specific sensor by ID.
      */
     @GET
     @Path("/{sensorId}")
@@ -91,9 +103,8 @@ public class SensorResource {
     }
 
     /**
-     * Part 4: Sub-Resource Locator Pattern
-     * Delegates all requests for /sensors/{sensorId}/readings to the SensorReadingResource.
-     * Note: This method does NOT have an HTTP annotation (like @GET or @POST).
+     * Sub-resource locator for historical readings.
+     * This is Part 4 of the coursework.
      */
     @Path("/{sensorId}/readings")
     public SensorReadingResource getSensorReadingResource(@PathParam("sensorId") String sensorId) {
