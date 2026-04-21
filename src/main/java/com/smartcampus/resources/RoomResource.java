@@ -2,8 +2,11 @@ package com.smartcampus.resources;
 
 import com.smartcampus.models.Room;
 import jakarta.ws.rs.*;
+import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import jakarta.ws.rs.core.UriInfo;
+import java.net.URI;
 import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -11,18 +14,18 @@ import java.util.concurrent.ConcurrentHashMap;
 @Path("/rooms")
 public class RoomResource {
 
-    // In-memory data store for rooms. 
-    // Note: Using ConcurrentHashMap for thread safety as JAX-RS resource instances are request-scoped.
+    // storing rooms in memory. 
+    // using ConcurrentHashMap because JAX-RS creates a new instance for every request, 
+    // so this needs to be static and thread-safe.
     private static Map<String, Room> roomDatabase = new ConcurrentHashMap<>();
 
-    // Getter so SensorResource can check if a room exists before linking (Part 3.1 Requirement)
+    // letting SensorResource access this to check if a room actually exists before adding a sensor
     public static Map<String, Room> getRoomDatabase() {
         return roomDatabase;
     }
 
     /**
-     * Retrieves all rooms currently registered in the system.
-     * @return A Response containing a JSON array of all Room objects.
+     * Gets all the rooms we currently have saved.
      */
     @GET
     @Produces(MediaType.APPLICATION_JSON)
@@ -38,30 +41,32 @@ public class RoomResource {
     }
 
     /**
-     * Creates a new room entry in the in-memory database.
-     * @param newRoom The Room object automatically deserialised from the JSON request payload.
-     * @return 201 Created response if successful, or 400 Bad Request if validation fails.
+     * Creates a new room. 
+     * Added UriInfo context to grab the path for the Location header.
      */
     @POST
     @Consumes(MediaType.APPLICATION_JSON) 
     @Produces(MediaType.APPLICATION_JSON) 
-    public Response createRoom(Room newRoom) {
-        // Validate payload: ID cannot be null or empty
+    public Response createRoom(Room newRoom, @Context UriInfo uriInfo) {
+        // basic check to make sure the ID isn't completely blank so it doesn't break our map
         if (newRoom.getId() == null || newRoom.getId().trim().isEmpty()) {
             return Response.status(Response.Status.BAD_REQUEST)
                            .entity("Room ID is required to create a room.")
                            .build();
         }
         
+        // save it to our database
         roomDatabase.put(newRoom.getId(), newRoom);
         
-        return Response.status(Response.Status.CREATED).entity(newRoom).build();
+        // building the URI for the location header (needed to get the marks for the video demo!)
+        URI location = uriInfo.getAbsolutePathBuilder().path(newRoom.getId()).build();
+        
+        // return 201 Created and attach the location header
+        return Response.created(location).entity(newRoom).build();
     }
 
     /**
-     * Retrieves a specific room by its unique identifier.
-     * @param roomId The ID extracted directly from the URL path.
-     * @return 200 OK with the requested Room data, or a 404 Not Found status.
+     * Grabs just one specific room using its ID from the URL.
      */
     @GET
     @Path("/{roomId}") 
@@ -69,6 +74,7 @@ public class RoomResource {
     public Response getRoomById(@PathParam("roomId") String roomId) {
         Room room = roomDatabase.get(roomId);
         
+        // if we found it, return it. otherwise, send a 404 error.
         if (room != null) {
             return Response.ok(room).build(); 
         } else {
@@ -79,30 +85,27 @@ public class RoomResource {
     }
 
     /**
-     * Deletes a specific room from the system.
-     * Enforces Part 2.2 Safety Logic: Cannot delete if sensors are still attached!
-     * @param roomId The unique identifier of the room to be removed.
-     * @return 204 No Content upon successful deletion, or 409 Conflict / 404 Not Found.
+     * Deletes a room, but only if it's empty.
      */
     @DELETE
     @Path("/{roomId}")
     public Response deleteRoom(@PathParam("roomId") String roomId) {
         Room room = roomDatabase.get(roomId);
         
-        // 1. If the room doesn't exist, return a 404
+        // 1. check if it even exists first
         if (room == null) {
             return Response.status(Response.Status.NOT_FOUND)
                            .entity("Cannot delete: Room not found.")
                            .build(); 
         }
         
-        // 2. Business Logic Constraint: Prevent Data Orphans
+        // 2. don't let them delete if there are still sensors attached to it
         if (!room.getSensorIds().isEmpty()) {
-            // Part 5.1: Throw custom exception to be caught by the ExceptionMapper
+            // throws our custom exception so the ExceptionMapper can handle it and send a 409
             throw new com.smartcampus.exceptions.RoomNotEmptyException("Cannot delete: Room currently has active sensors assigned to it.");
         }
         
-        // 3. Attempt to remove the room from the map
+        // 3. safe to delete now
         roomDatabase.remove(roomId);
         return Response.noContent().build(); 
     }
