@@ -51,7 +51,8 @@ public class RoomResource {
         // basic check to make sure the ID isn't completely blank so it doesn't break our map
         if (newRoom.getId() == null || newRoom.getId().trim().isEmpty()) {
             return Response.status(Response.Status.BAD_REQUEST)
-                           .entity("Room ID is required to create a room.")
+                           .entity("{\"error\": \"Room ID is required to create a room.\"}")
+                           .type(MediaType.APPLICATION_JSON)
                            .build();
         }
         
@@ -74,12 +75,13 @@ public class RoomResource {
     public Response getRoomById(@PathParam("roomId") String roomId) {
         Room room = roomDatabase.get(roomId);
         
-        // if we found it, return it. otherwise, send a 404 error.
+        // if we found it, return it. otherwise, send a 404 error formatted as JSON.
         if (room != null) {
             return Response.ok(room).build(); 
         } else {
             return Response.status(Response.Status.NOT_FOUND)
-                           .entity("Room not found.")
+                           .entity("{\"error\": \"Room not found.\"}")
+                           .type(MediaType.APPLICATION_JSON)
                            .build(); 
         }
     }
@@ -92,10 +94,11 @@ public class RoomResource {
     public Response deleteRoom(@PathParam("roomId") String roomId) {
         Room room = roomDatabase.get(roomId);
         
-        // 1. check if it even exists first
+        // 1. check if it even exists first. Return 404 JSON if it doesn't. (Rubric requirement)
         if (room == null) {
             return Response.status(Response.Status.NOT_FOUND)
-                           .entity("Cannot delete: Room not found.")
+                           .entity("{\"error\": \"Room not found.\"}")
+                           .type(MediaType.APPLICATION_JSON)
                            .build(); 
         }
         
@@ -110,5 +113,3 @@ public class RoomResource {
         return Response.noContent().build(); 
     }
 }
-
-//fixed RoomResource.java
