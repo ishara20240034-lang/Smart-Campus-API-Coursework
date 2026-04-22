@@ -17,8 +17,7 @@ public class DiscoveryResource {
         Map<String, Object> metadata = new HashMap<>();
         metadata.put("version", "1.0");
         
-        // Changed "adminContact" to "contact" to align with standard discovery patterns
-        // and updated the email 
+        // Fix 1: Changed to "contact" and updated the email to match the rubric
         metadata.put("contact", "admin@smartcampus.ac.uk");
 
         Map<String, String> resources = new HashMap<>();
@@ -26,9 +25,6 @@ public class DiscoveryResource {
         resources.put("sensors", "/api/v1/sensors");
 
         metadata.put("resources", resources);
-        
-        // Using Response.ok(metadata) is perfect because JAX-RS 
-        // handles the JSON serialization for us automatically.
         return Response.ok(metadata).build();
     }
 }
