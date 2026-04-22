@@ -16,13 +16,19 @@ public class DiscoveryResource {
     public Response getApiMetadata() {
         Map<String, Object> metadata = new HashMap<>();
         metadata.put("version", "1.0");
-        metadata.put("adminContact", "admin@smartcampus.university.edu");
+        
+        // Changed "adminContact" to "contact" to align with standard discovery patterns
+        // and updated the email 
+        metadata.put("contact", "admin@smartcampus.ac.uk");
 
         Map<String, String> resources = new HashMap<>();
         resources.put("rooms", "/api/v1/rooms");
         resources.put("sensors", "/api/v1/sensors");
 
         metadata.put("resources", resources);
+        
+        // Using Response.ok(metadata) is perfect because JAX-RS 
+        // handles the JSON serialization for us automatically.
         return Response.ok(metadata).build();
     }
 }
